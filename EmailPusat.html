@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pusat Bantuan - Alfamind</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{background:#1a1a2e;height:100%}
+        body{font-family:Arial,sans-serif;background:#f5f5f5;max-width:420px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.3)}
+        .status-bar{background:#fff;padding:8px 16px;display:flex;justify-content:space-between;font-size:11px;font-weight:bold;color:#333}
+        .header{background:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #eee}
+        .back{color:#e30613;font-size:24px;text-decoration:none;font-weight:bold}
+        .header h1{font-size:16px;font-weight:600;color:#e30613}
+        .content{flex:1;padding:20px;background:#fff}
+        .title{font-size:16px;font-weight:600;color:#333;margin-bottom:24px}
+        .form-group{margin-bottom:20px}
+        .form-label{font-size:14px;color:#333;margin-bottom:8px;display:block}
+        .form-input{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#f9f9f9}
+        .form-input:focus{border-color:#e30613;background:#fff}
+        .form-textarea{width:100%;padding:14px 16px;border:1px solid #ddd;border-radius:8px;font-size:14px;outline:none;background:#f9f9f9;min-height:200px;resize:vertical;font-family:Arial,sans-serif}
+        .form-textarea:focus{border-color:#e30613;background:#fff}
+        .btn-submit{width:100%;padding:16px;background:#e0e0e0;color:#999;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:not-allowed;margin-top:40px}
+        .btn-submit.active{background:#e30613;color:#fff;cursor:pointer}
+        .btn-submit.active:hover{background:#c70511}
+    </style>
+</head>
+<body>
+<div class="status-bar"><span id="clock">09:42</span><div>📶 🔋 66%</div></div>
+<div class="header">
+    <a href="PusatBantuan.html" class="back">‹</a>
+    <h1>Pusat Bantuan</h1>
+</div>
+<div class="content">
+    <div class="title">Ada yang bisa kami bantu?</div>
+    <form id="helpForm">
+        <div class="form-group">
+            <label class="form-label">Email</label>
+            <input type="email" class="form-input" id="email" value="cs.alfamind@gmail.com" readonly>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Topik Pertanyaan</label>
+            <input type="text" class="form-input" id="topic" placeholder="Masalah aplikasi, transaksi, dll">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Deskripsi</label>
+            <textarea class="form-textarea" id="description" placeholder="Sertakan informasi pendukung berupa nomor order atau plu produk serta informasi lainnya"></textarea>
+        </div>
+        <button type="submit" class="btn-submit" id="submitBtn" disabled>Kirim pesan</button>
+    </form>
+</div>
+<script>
+var topic=document.getElementById('topic');
+var desc=document.getElementById('description');
+var btn=document.getElementById('submitBtn');
+
+function checkForm(){
+    if(topic.value.trim()&&desc.value.trim()){
+        btn.classList.add('active');
+        btn.disabled=false;
+    }else{
+        btn.classList.remove('active');
+        btn.disabled=true;
+    }
+}
+
+topic.addEventListener('input',checkForm);
+desc.addEventListener('input',checkForm);
+
+document.getElementById('helpForm').addEventListener('submit',function(e){
+    e.preventDefault();
+    if(topic.value.trim()&&desc.value.trim()){
+        alert('Pesan berhasil dikirim!\n\nTopik: '+topic.value+'\nDeskripsi: '+desc.value);
+        topic.value='';
+        desc.value='';
+        checkForm();
+    }
+});
+</script>
+<script>
+function updateClock(){var d=new Date();document.getElementById('clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+updateClock();setInterval(updateClock,1000);
+</script>
+</body>
+</html>
