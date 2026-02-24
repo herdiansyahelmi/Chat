@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chat Room - Alfamind</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html{background:#1a1a2e;height:100%}
+        body{font-family:Arial,sans-serif;background:#fafafa;max-width:420px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,0,0,.3)}
+        .status-bar{background:#e30613;padding:8px 16px;display:flex;justify-content:space-between;font-size:11px;color:#fff;font-weight:bold;position:fixed;top:0;left:0;right:0;max-width:420px;margin:0 auto;z-index:100}
+        .header{background:#e30613;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;position:fixed;top:28px;left:0;right:0;max-width:420px;margin:0 auto;z-index:100}
+        .back{color:#fff;font-size:22px;text-decoration:none;font-weight:bold}
+        .header-info h3{font-size:15px;font-weight:bold}
+        .header-info p{font-size:11px;opacity:.9}
+        .messages{flex:1;overflow-y:auto;padding:16px;padding-top:100px;padding-bottom:80px;display:flex;flex-direction:column;gap:10px}
+        .msg{max-width:85%;display:flex;flex-direction:column}
+        .msg.other{align-self:flex-start}
+        .msg.me{align-self:flex-end}
+        .msg .sender{font-size:11px;font-weight:600;color:#e30613;margin-bottom:2px}
+        .msg .bubble{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+        .msg.other .bubble{background:#fff;color:#333;border-bottom-left-radius:4px}
+        .msg.me .bubble{background:#ff4757;color:#fff;border-bottom-right-radius:4px;box-shadow:0 2px 4px rgba(255,71,87,.2)}
+        .msg .time{font-size:10px;color:#999;margin-top:3px}
+        .msg.me .time{text-align:right}
+        .msg .bubble{position:relative;cursor:pointer}
+        .msg .bubble:active{opacity:.8}
+        .reply-preview{background:#f0f0f0;border-left:3px solid #e30613;padding:6px 10px;margin-bottom:6px;border-radius:6px;font-size:11px}
+        .reply-preview .reply-sender{font-weight:600;color:#e30613;margin-bottom:2px}
+        .reply-preview .reply-text{color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .reply-bar{background:#fff3e0;padding:10px 16px;border-top:2px solid #e30613;border-left:4px solid #e30613;display:none;align-items:center;gap:8px;position:fixed;bottom:60px;left:0;right:0;max-width:420px;margin:0 auto;box-shadow:0 -2px 8px rgba(227,6,19,.1);border-radius:12px 12px 0 0}
+        .reply-bar.show{display:flex}
+        .reply-info{flex:1;font-size:12px}
+        .reply-info .reply-to{font-weight:600;color:#e30613;font-size:13px;margin-bottom:3px}
+        .reply-info .reply-msg{color:#666;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:#fff;padding:6px 10px;border-radius:8px;margin-top:4px}
+        .reply-bar .close{color:#e30613;cursor:pointer;font-size:20px;padding:4px;font-weight:bold;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%;background:#fff;transition:.2s}
+        .reply-bar .close:hover{background:#fee}
+        .input-bar{padding:12px 16px;background:#fff;border-top:1px solid #eee;display:flex;gap:10px;align-items:center;position:fixed;bottom:0;left:0;right:0;max-width:420px;margin:0 auto;z-index:10}
+        .input-bar input{flex:1;padding:12px 16px;border:1px solid #ddd;border-radius:25px;font-size:14px;outline:none}
+        .input-bar input:focus{border-color:#e30613}
+        .input-bar button{width:40px;height:40px;background:#e30613;color:#fff;border:none;border-radius:50%;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center}
+        .input-bar button:hover{background:#c70511}
+        .loading{text-align:center;padding:40px;color:#999;font-size:13px}
+    </style>
+</head>
+<body>
+<div class="status-bar"><span id="clock"></span><div>📶 🔋</div></div>
+<div class="header">
+    <a href="Chatgrup.html" class="back">‹</a>
+    <div class="header-info">
+        <h3 id="grupName">Loading...</h3>
+        <p id="grupMembers"></p>
+    </div>
+</div>
+<div class="messages" id="messages">
+    <div class="loading">⏳ Memuat pesan...</div>
+</div>
+<div class="reply-bar" id="replyBar">
+    <div class="reply-info">
+        <div class="reply-to" id="replyTo"></div>
+        <div class="reply-msg" id="replyMsg"></div>
+    </div>
+    <span class="close" onclick="cancelReply()">✕</span>
+</div>
+<div class="input-bar">
+    <input type="text" id="msgInput" placeholder="Ketik pesan..." onkeypress="if(event.key==='Enter')sendMsg()">
+    <button onclick="sendMsg()">➤</button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL='https://xobpjlcxioldrttoietl.supabase.co';
+var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvYnBqbGN4aW9sZHJ0dG9pZXRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NTU2NTUsImV4cCI6MjA4NzEzMTY1NX0.GNjqP3Zv4V1B9qsFhscywc_Qor4SJ_4hy3-uG27Vm0E';
+var sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+var user=JSON.parse(localStorage.getItem('user'));
+if(!user) window.location.href='Login.html';
+
+var groupId=new URLSearchParams(window.location.search).get('id');
+if(!groupId) window.location.href='Chatgrup.html';
+
+var memberNames={};
+var replyTo=null;
+var notificationPermission=false;
+
+// Register Service Worker & Request Notification Permission
+if('serviceWorker' in navigator && 'Notification' in window){
+    navigator.serviceWorker.register('/service-worker.js').then(function(reg){
+        console.log('Service Worker registered');
+    }).catch(function(err){
+        console.log('Service Worker registration failed:', err);
+    });
+    
+    if(Notification.permission==='granted'){
+        notificationPermission=true;
+    }else if(Notification.permission!=='denied'){
+        Notification.requestPermission().then(function(permission){
+            notificationPermission=(permission==='granted');
+        });
+    }
+}
+
+async function init(){
+    // Load group info
+    var {data:group}=await sb.from('chat_groups').select('*').eq('id',groupId).single();
+    if(group) document.getElementById('grupName').textContent=group.nama_grup;
+
+    // Load members & names
+    var {data:members}=await sb.from('chat_group_members').select('member_id, data_user(nama)').eq('group_id',groupId);
+    if(members){
+        document.getElementById('grupMembers').textContent=members.length+' anggota';
+        members.forEach(function(m){
+            memberNames[m.member_id]=m.data_user?m.data_user.nama:'User '+m.member_id;
+        });
+    }
+
+    loadMessages();
+    subscribeMessages();
+}
+
+async function loadMessages(){
+    var container=document.getElementById('messages');
+    var {data:msgs}=await sb.from('chat_messages').select('*').eq('group_id',groupId).order('created_at',{ascending:true}).limit(100);
+    container.innerHTML='';
+    if(!msgs||msgs.length===0){
+        container.innerHTML='<div class="loading">Belum ada pesan. Mulai percakapan!</div>';
+        return;
+    }
+    msgs.forEach(function(m){renderMsg(m,false);});
+    var lastMsg=container.lastElementChild;
+    if(lastMsg){
+        lastMsg.scrollIntoView({behavior:'auto',block:'end'});
+    }
+}
+
+function renderMsg(m,autoScroll){
+    if(autoScroll===undefined)autoScroll=true;
+    var container=document.getElementById('messages');
+    var isMe=m.member_id===user.memberId;
+    var div=document.createElement('div');
+    div.className='msg '+(isMe?'me':'other');
+    div.setAttribute('data-id',m.id||Date.now());
+    div.setAttribute('data-sender',memberNames[m.member_id]||'User '+m.member_id);
+    div.setAttribute('data-text',m.message);
+    
+    var time=new Date(m.created_at);
+    var timeStr=time.getHours().toString().padStart(2,'0')+':'+time.getMinutes().toString().padStart(2,'0');
+    var senderHtml=isMe?'':'<div class="sender">'+(memberNames[m.member_id]||'User '+m.member_id)+'</div>';
+    
+    var replyHtml='';
+    if(m.reply_to){
+        var replyData=JSON.parse(m.reply_to);
+        replyHtml='<div class="reply-preview"><div class="reply-sender">'+replyData.sender+'</div><div class="reply-text">'+replyData.text+'</div></div>';
+    }
+    
+    div.innerHTML=senderHtml+'<div class="bubble" onclick="setReply(this.parentElement)">'+replyHtml+m.message+'</div><div class="time">'+timeStr+'</div>';
+    container.appendChild(div);
+    if(autoScroll)container.scrollTop=container.scrollHeight;
+}
+
+function setReply(msgEl){
+    replyTo={
+        sender:msgEl.getAttribute('data-sender'),
+        text:msgEl.getAttribute('data-text')
+    };
+    document.getElementById('replyTo').innerHTML='↩️ Membalas <strong>'+replyTo.sender+'</strong>';
+    document.getElementById('replyMsg').textContent=replyTo.text;
+    document.getElementById('replyBar').classList.add('show');
+    document.getElementById('msgInput').placeholder='Ketik balasan...';
+    document.getElementById('msgInput').focus();
+}
+
+function cancelReply(){
+    replyTo=null;
+    document.getElementById('replyBar').classList.remove('show');
+    document.getElementById('msgInput').placeholder='Ketik pesan...';
+}
+
+function subscribeMessages(){
+    sb.channel('room-'+groupId)
+        .on('postgres_changes',{event:'INSERT',schema:'public',table:'chat_messages',filter:'group_id=eq.'+groupId},function(payload){
+            if(payload.new.member_id!==user.memberId){
+                renderMsg(payload.new);
+                
+                // Show notification jika tab tidak aktif
+                if(document.hidden && notificationPermission){
+                    var senderName=memberNames[payload.new.member_id]||'User';
+                    var grupName=document.getElementById('grupName').textContent;
+                    
+                    new Notification(grupName,{
+                        body:senderName+': '+payload.new.message,
+                        icon:'/Alfamind.jpg',
+                        badge:'/IconCS.jpg',
+                        tag:'chat-'+groupId,
+                        vibrate:[200,100,200]
+                    });
+                }
+            }
+        })
+        .subscribe();
+}
+
+async function sendMsg(){
+    var input=document.getElementById('msgInput');
+    var text=input.value.trim();
+    if(!text)return;
+    input.value='';
+
+    var msg={group_id:groupId,member_id:user.memberId,message:text};
+    
+    if(replyTo){
+        msg.reply_to=JSON.stringify(replyTo);
+        cancelReply();
+    }
+    
+    // Render langsung
+    var now=new Date().toISOString();
+    renderMsg({group_id:groupId,member_id:user.memberId,message:text,created_at:now,reply_to:msg.reply_to});
+
+    await sb.from('chat_messages').insert(msg);
+}
+
+init();
+
+function updateClock(){var d=new Date();document.getElementById('clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+updateClock();setInterval(updateClock,1000);
+</script>
+</body>
+</html>
