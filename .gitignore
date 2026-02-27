@@ -1,0 +1,9 @@
+# Ignore config file dengan API key
+config.js
+
+# Ignore node_modules jika ada
+node_modules/
+
+# Ignore file temporary
+*.tmp
+*.log
