@@ -16,7 +16,7 @@ export default async function handler(req, res) {
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.1-70b-versatile',
+                    model: 'llama-3.3-70b-versatile'
                     messages: [
                         {
                             role: 'system',
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         
         return res.status(200).json({ 
             answer: answer,
-            model: 'llama-3.1-70b-versatile'
+            model: 'llama-3.3-70b-versatile'
         });
     } catch (error) {
         return res.status(500).json({ error: error.message });
