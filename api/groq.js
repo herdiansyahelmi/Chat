@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     }
 
     // GANTI API KEY INI DENGAN YANG BARU DARI https://console.groq.com/keys
-    const apiKey = process.env.GROQ_API_KEY || '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';
+    const apiKey = process.env.GROQ_API_KEY || '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';
 
     try {
         const response = await fetch(
