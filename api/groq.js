@@ -1,10 +1,25 @@
 export default async function handler(req, res) {
+    // Enable CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+    
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
     const { message } = req.body;
-    const apiKey = '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';
+    
+    if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+    }
+
+    // GANTI API KEY INI DENGAN YANG BARU DARI https://console.groq.com/keys
+    const apiKey = process.env.GROQ_API_KEY || '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';
 
     try {
         const response = await fetch(
@@ -16,7 +31,7 @@ export default async function handler(req, res) {
                     'Authorization': `Bearer ${apiKey}`
                 },
                 body: JSON.stringify({
-                    model: 'llama-3.3-70b-versatile'
+                    model: 'llama-3.3-70b-versatile',
                     messages: [
                         {
                             role: 'system',
@@ -35,10 +50,17 @@ export default async function handler(req, res) {
 
         if (!response.ok) {
             const errorText = await response.text();
-            return res.status(response.status).json({ error: errorText });
+            console.error('Groq API Error:', errorText);
+            return res.status(response.status).json({ error: `Groq API Error: ${errorText}` });
         }
 
         const data = await response.json();
+        
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('Invalid response structure:', data);
+            return res.status(500).json({ error: 'Invalid response from Groq API' });
+        }
+        
         const answer = data.choices[0].message.content;
         
         return res.status(200).json({ 
@@ -46,6 +68,7 @@ export default async function handler(req, res) {
             model: 'llama-3.3-70b-versatile'
         });
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        console.error('Function error:', error);
+        return res.status(500).json({ error: `Server error: ${error.message}` });
     }
 }
