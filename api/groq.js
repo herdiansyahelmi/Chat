@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     }
 
     const { message } = req.body;
-    const apiKey = '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';
+    const apiKey = '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';
 
     try {
         const response = await fetch(
