@@ -4,7 +4,11 @@ export default async function handler(req, res) {
     }
 
     const { message } = req.body;
-    const apiKey = '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';
+    const apiKey = process.env.GROQ_API_KEY;
+
+    if (!apiKey) {
+        return res.status(500).json({ error: 'API key not configured' });
+    }
 
     try {
         const response = await fetch(
@@ -40,8 +44,8 @@ export default async function handler(req, res) {
 
         const data = await response.json();
         const answer = data.choices[0].message.content;
-        
-        return res.status(200).json({ 
+
+        return res.status(200).json({
             answer: answer,
             model: 'llama-3.1-70b-versatile'
         });
