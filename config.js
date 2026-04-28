@@ -1,0 +1,3 @@
+// Supabase Configuration
+const SUPABASE_URL = 'https://xobpjlcxioldrttoietl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhvYnBqbGN4aW9sZHJ0dG9pZXRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NTU2NTUsImV4cCI6MjA4NzEzMTY1NX0.GNjqP3Zv4V1B9qsFhscywc_Qor4SJ_4hy3-uG27Vm0E';

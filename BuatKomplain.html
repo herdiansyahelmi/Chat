@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buat Komplain - Alfamind</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            background: #1a1a2e;
+            height: 100%;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            box-shadow: 0 0 40px rgba(0,0,0,.3);
+        }
+
+        .status-bar {
+            background: #fff;
+            padding: 8px 16px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .header {
+            background: #fff;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .back {
+            color: #e30613;
+            font-size: 24px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e30613;
+        }
+
+        .form-container {
+            padding: 16px;
+            background: #f5f5f5;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-group label .required {
+            color: #e74c3c;
+        }
+
+        .form-group select,
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #e30613;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .upload-area {
+            border: 2px dashed #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f3ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .upload-limit {
+            color: #999;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .preview-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(231, 76, 60, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 14px;
+            background: #e30613;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-submit:hover {
+            background: #c70511;
+        }
+
+        .btn-submit:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-back {
+            display: inline-block;
+            margin-bottom: 16px;
+            color: #e30613;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .alert.show {
+            display: block;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+<div class="status-bar"><span id="clock">15:33</span><div>📶 🔋 58%</div></div>
+<div class="header">
+    <a href="PusatBantuan.html" class="back">‹</a>
+    <h1>Buat Komplain</h1>
+</div>
+
+<div class="form-container">
+    <div id="alertBox" class="alert"></div>
+
+            <form id="complaintForm">
+                <div class="form-group">
+                    <label>Kategori <span class="required">*</span></label>
+                    <select id="category" required>
+                        <option value="">Pilih Kategori</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Subjek <span class="required">*</span></label>
+                    <input type="text" id="subject" placeholder="Contoh: Produk rusak saat diterima" required maxlength="200">
+                </div>
+
+                <div class="form-group">
+                    <label>Deskripsi <span class="required">*</span></label>
+                    <textarea id="description" placeholder="Jelaskan masalah Anda secara detail..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Upload Foto (Opsional)</label>
+                    <div class="upload-area" id="uploadArea">
+                        <div class="upload-icon">📷</div>
+                        <div class="upload-text">Klik atau drag & drop foto di sini</div>
+                        <div class="upload-limit">Max 3 foto, masing-masing max 5MB (JPG, PNG)</div>
+                    </div>
+                    <input type="file" id="fileInput" accept="image/jpeg,image/png" multiple>
+                    <div class="preview-container" id="previewContainer"></div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">
+                    Kirim Komplain
+                </button>
+            </form>
+
+            <div class="loading" id="loadingBox">
+                <div class="spinner"></div>
+                <p>Mengirim komplain...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function updateClock(){var d=new Date();document.getElementById('clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+updateClock();setInterval(updateClock,1000);
+
+// Initialize Supabase
+var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let selectedFiles = [];
+const MAX_FILES = 3;
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+// Load user session
+const noTlp = localStorage.getItem('noTlp');
+const userName = localStorage.getItem('userName');
+
+console.log('User Data:', { noTlp, userName });
+
+if (!noTlp || !userName) {
+    alert('Silakan login terlebih dahulu');
+    window.location.href = 'Login.html';
+}
+
+// Create userData object for compatibility
+const userData = {
+    noTlp: noTlp,
+    nama: userName,
+    memberId: noTlp,
+    member_id: noTlp
+};
+
+// Load categories
+async function loadCategories() {
+            try {
+                const { data, error } = await supabase
+                    .from('ticket_categories')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('category_name');
+
+                console.log('Categories:', data, error);
+
+                if (error) {
+                    console.error('Error loading categories:', error);
+                    return;
+                }
+
+                if (data && data.length > 0) {
+                    const select = document.getElementById('category');
+                    data.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.category_name;
+                        option.textContent = `${cat.icon} ${cat.category_name}`;
+                        select.appendChild(option);
+                    });
+                } else {
+                    console.warn('No categories found');
+                }
+            } catch (err) {
+                console.error('Exception:', err);
+            }
+        }
+
+        // Upload area handlers
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            const fileArray = Array.from(files);
+            
+            if (selectedFiles.length + fileArray.length > MAX_FILES) {
+                showAlert(`Maksimal ${MAX_FILES} foto`, 'error');
+                return;
+            }
+
+            fileArray.forEach(file => {
+                if (!file.type.match('image/jpeg') && !file.type.match('image/png')) {
+                    showAlert('Hanya file JPG dan PNG yang diperbolehkan', 'error');
+                    return;
+                }
+
+                if (file.size > MAX_FILE_SIZE) {
+                    showAlert('Ukuran file maksimal 5MB', 'error');
+                    return;
+                }
+
+                selectedFiles.push(file);
+                addPreview(file);
+            });
+        }
+
+        function addPreview(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <button type="button" class="remove-btn" onclick="removeFile('${file.name}')">×</button>
+                `;
+                previewContainer.appendChild(div);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        window.removeFile = function(fileName) {
+            selectedFiles = selectedFiles.filter(f => f.name !== fileName);
+            renderPreviews();
+        };
+
+        function renderPreviews() {
+            previewContainer.innerHTML = '';
+            selectedFiles.forEach(file => addPreview(file));
+        }
+
+        // Submit form
+        document.getElementById('complaintForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            console.log('Form submitted');
+
+            const category = document.getElementById('category').value;
+            const subject = document.getElementById('subject').value;
+            const description = document.getElementById('description').value;
+
+            console.log('Form data:', { category, subject, description });
+
+            if (!category || !subject || !description) {
+                showAlert('Mohon lengkapi semua field yang wajib diisi', 'error');
+                return;
+            }
+
+            document.getElementById('submitBtn').disabled = true;
+            document.getElementById('loadingBox').classList.add('active');
+            document.getElementById('complaintForm').style.display = 'none';
+
+            try {
+                console.log('Creating ticket...');
+                
+                // Generate ticket number manually
+                const today = new Date().toISOString().slice(0,10).replace(/-/g, '');
+                const { count } = await supabase
+                    .from('complaint_tickets')
+                    .select('*', { count: 'exact', head: true })
+                    .like('ticket_number', `TKT-${today}-%`);
+                
+                const ticketNumber = `TKT-${today}-${String((count || 0) + 1).padStart(3, '0')}`;
+                
+                console.log('Ticket number:', ticketNumber);
+
+                // Create ticket
+                const { data: ticket, error: ticketError } = await supabase
+                    .from('complaint_tickets')
+                    .insert({
+                        ticket_number: ticketNumber,
+                        member_id: userData.memberId || userData.member_id,
+                        category: category,
+                        subject: subject,
+                        description: description,
+                        status: 'open',
+                        priority: 'normal'
+                    })
+                    .select()
+                    .single();
+
+                console.log('Ticket created:', ticket, ticketError);
+
+                if (ticketError) throw ticketError;
+
+                showAlert('Komplain berhasil dikirim! Ticket Number: ' + ticketNumber, 'success');
+                
+                setTimeout(() => {
+                    window.location.href = 'DaftarKomplain.html';
+                }, 2000);
+
+            } catch (error) {
+                console.error('Error:', error);
+                showAlert('Gagal mengirim komplain: ' + error.message, 'error');
+                document.getElementById('submitBtn').disabled = false;
+                document.getElementById('loadingBox').classList.remove('active');
+                document.getElementById('complaintForm').style.display = 'block';
+            }
+        });
+
+        function showAlert(message, type) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.textContent = message;
+            alertBox.className = `alert alert-${type} show`;
+            setTimeout(() => {
+                alertBox.classList.remove('show');
+            }, 5000);
+        }
+
+        // Initialize
+        loadCategories();
+    </script>
+</body>
+</html>

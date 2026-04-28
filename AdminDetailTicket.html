@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Detail Ticket</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 220px;
+            height: 100vh;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px 0;
+        }
+
+        .sidebar .logo {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #2a2a4e;
+        }
+
+        .sidebar .menu {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .sidebar .menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: .2s;
+        }
+
+        .sidebar .menu li:hover, .sidebar .menu li.active {
+            background: #2a2a4e;
+            border-left: 3px solid #e30613;
+        }
+
+        .main {
+            margin-left: 220px;
+            padding: 20px;
+        }
+
+        .topbar {
+            background: #fff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+
+        .topbar h2 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .ticket-info {
+            width: 350px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            overflow-y: auto;
+            max-height: calc(100vh - 120px);
+        }
+
+        .status-section {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .status-open { background: #fff3cd; color: #856404; }
+        .status-in_progress { background: #cce5ff; color: #004085; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-closed { background: #e2e3e5; color: #383d41; }
+
+        .priority-select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .info-group {
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-group:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .customer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .customer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .attachments {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .attachment-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            object-fit: cover;
+            cursor: pointer;
+            border: 2px solid #e0e0e0;
+        }
+
+        .activity-log {
+            margin-top: 20px;
+        }
+
+        .activity-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .activity-time {
+            color: #999;
+            font-size: 11px;
+        }
+
+        .chat-container {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            display: flex;
+            gap: 10px;
+            max-width: 70%;
+        }
+
+        .message.admin {
+            align-self: flex-end;
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #667eea;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .message.admin .message-avatar {
+            background: #28a745;
+        }
+
+        .message-content {
+            flex: 1;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+
+        .message-sender {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: #999;
+        }
+
+        .message-bubble {
+            background: #f0f3ff;
+            padding: 12px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            color: #333;
+            word-wrap: break-word;
+        }
+
+        .message.admin .message-bubble {
+            background: #28a745;
+            color: white;
+        }
+
+        .message.system .message-bubble {
+            background: #fff3cd;
+            color: #856404;
+            font-style: italic;
+        }
+
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .quick-replies {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-reply-btn {
+            padding: 6px 12px;
+            background: #f0f3ff;
+            color: #667eea;
+            border: 1px solid #667eea;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-reply-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+
+        #messageInput {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 14px;
+            resize: none;
+            max-height: 100px;
+            font-family: inherit;
+        }
+
+        #messageInput:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-send {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .modal-text {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn-modal {
+            padding: 10px 30px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-confirm {
+            background: #28a745;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo"><img src="Alfamind.jpg" style="width:100%;max-width:160px"></div>
+    <ul class="menu">
+        <li onclick="location.href='Dashboard.html'">📊 Dashboard</li>
+        <li onclick="location.href='Dashboard.html'">💬 Grup Chat</li>
+        <li class="active" onclick="location.href='AdminTicket.html'">🎫 Ticket Komplain</li>
+        <li onclick="location.href='Dashboard.html'">👥 Data User</li>
+        <li onclick="logout()">🚪 Logout</li>
+    </ul>
+</div>
+
+<div class="main">
+    <div class="topbar">
+        <h2 id="ticketNumber">Loading...</h2>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary" id="btnResolve" onclick="resolveTicket()">✓ Resolve</button>
+            <button class="btn btn-primary" id="btnClose" onclick="closeTicket()" style="background: #6c757d;">✕ Close</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="ticket-info">
+            <div class="status-section">
+                <span id="statusBadge" class="status-badge"></span>
+                <select id="prioritySelect" class="priority-select" onchange="updatePriority()">
+                    <option value="low">🟢 Low Priority</option>
+                    <option value="normal">🟡 Normal Priority</option>
+                    <option value="high">🟠 High Priority</option>
+                    <option value="urgent">🔴 Urgent Priority</option>
+                </select>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label">Customer</div>
+                <div class="customer-info">
+                    <div class="customer-avatar" id="customerAvatar">C</div>
+                    <div>
+                        <div class="info-value" id="customerName"></div>
+                        <div style="font-size: 12px; color: #999;" id="customerPhone"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label">Kategori</div>
+                <div class="info-value" id="ticketCategory"></div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label">Deskripsi</div>
+                <div class="info-value" id="ticketDescription"></div>
+            </div>
+
+            <div class="info-group">
+                <div class="info-label">Dibuat</div>
+                <div class="info-value" id="ticketCreated"></div>
+            </div>
+
+            <div class="info-group" id="assignedGroup" style="display: none;">
+                <div class="info-label">Assigned To</div>
+                <div class="info-value" id="assignedTo"></div>
+            </div>
+
+            <div class="info-group" id="attachmentsGroup" style="display: none;">
+                <div class="info-label">Lampiran</div>
+                <div class="attachments" id="attachmentsList"></div>
+            </div>
+
+            <div class="activity-log">
+                <div class="info-label">Activity Log</div>
+                <div id="activityList"></div>
+            </div>
+        </div>
+
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages"></div>
+            <div class="chat-input-area">
+                <div class="quick-replies">
+                    <button class="quick-reply-btn" onclick="useQuickReply('Terima kasih telah menghubungi kami. Saya akan segera membantu Anda.')">👋 Salam</button>
+                    <button class="quick-reply-btn" onclick="useQuickReply('Mohon tunggu sebentar, saya sedang mengecek informasi Anda.')">⏳ Tunggu</button>
+                    <button class="quick-reply-btn" onclick="useQuickReply('Masalah Anda sudah kami selesaikan. Apakah ada yang bisa kami bantu lagi?')">✓ Selesai</button>
+                    <button class="quick-reply-btn" onclick="useQuickReply('Mohon maaf atas ketidaknyamanan yang Anda alami.')">🙏 Maaf</button>
+                </div>
+                <div class="input-wrapper">
+                    <textarea id="messageInput" placeholder="Ketik pesan..." rows="1"></textarea>
+                    <button class="btn-send" id="sendBtn" onclick="sendMessage()">Kirim</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Resolve -->
+    <div class="modal" id="resolveModal">
+        <div class="modal-content">
+            <div class="modal-icon">✅</div>
+            <div class="modal-title">Resolve Ticket?</div>
+            <div class="modal-text">Apakah masalah sudah selesai dan ticket siap di-resolve?</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModal()">Batal</button>
+                <button class="btn-modal btn-confirm" onclick="confirmResolve()">Ya, Resolve</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Close -->
+    <div class="modal" id="closeModal">
+        <div class="modal-content">
+            <div class="modal-icon">⚫</div>
+            <div class="modal-title">Close Ticket?</div>
+            <div class="modal-text">Ticket akan ditutup dan tidak bisa dibuka lagi.</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModalDialog()">Batal</button>
+                <button class="btn-modal btn-confirm" onclick="confirmClose()">Ya, Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('admin');
+            window.location.href = 'LoginAdmin.html';
+        }
+
+        var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const adminData = JSON.parse(localStorage.getItem('admin'));
+        
+        if (!adminData) {
+            alert('Akses ditolak');
+            window.location.href = 'LoginAdmin.html';
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const ticketId = urlParams.get('id');
+        let currentTicket = null;
+        let customerData = null;
+
+        const quickReplies = [
+            'Terima kasih telah menghubungi kami. Saya akan segera membantu Anda.',
+            'Mohon tunggu sebentar, saya sedang mengecek informasi Anda.',
+            'Masalah Anda sudah kami selesaikan. Apakah ada yang bisa kami bantu lagi?',
+            'Mohon maaf atas ketidaknyamanan yang Anda alami.',
+            'Bisakah Anda memberikan informasi lebih detail?'
+        ];
+
+        async function loadTicketDetail() {
+            const { data, error } = await supabase
+                .from('complaint_tickets')
+                .select('*')
+                .eq('id', ticketId)
+                .single();
+
+            console.log('Ticket detail:', data, error);
+
+            if (error || !data) {
+                alert('Ticket tidak ditemukan');
+                window.location.href = 'AdminTicket.html';
+                return;
+            }
+
+            currentTicket = data;
+            displayTicketInfo(data);
+            loadMessages();
+
+            if (data.status === 'resolved' || data.status === 'closed') {
+                document.getElementById('btnResolve').style.display = 'none';
+            }
+            if (data.status === 'closed') {
+                document.getElementById('btnClose').style.display = 'none';
+            }
+        }
+
+        function displayTicketInfo(ticket) {
+            document.getElementById('ticketNumber').textContent = ticket.ticket_number + ' - ' + ticket.subject;
+            document.getElementById('ticketCategory').textContent = ticket.category;
+            document.getElementById('ticketDescription').textContent = ticket.description;
+            document.getElementById('ticketCreated').textContent = new Date(ticket.created_at).toLocaleString('id-ID');
+            document.getElementById('prioritySelect').value = ticket.priority;
+
+            document.getElementById('customerName').textContent = ticket.member_id;
+            document.getElementById('customerPhone').textContent = ticket.member_id;
+            document.getElementById('customerAvatar').textContent = 'C';
+
+            if (ticket.assigned_to) {
+                document.getElementById('assignedGroup').style.display = 'block';
+                document.getElementById('assignedTo').textContent = ticket.assigned_to;
+            }
+
+            const statusBadge = document.getElementById('statusBadge');
+            const statusLabels = {
+                'open': '🟡 Open',
+                'in_progress': '🔵 In Progress',
+                'resolved': '🟢 Resolved',
+                'closed': '⚫ Closed'
+            };
+            statusBadge.textContent = statusLabels[ticket.status];
+            statusBadge.className = `status-badge status-${ticket.status}`;
+        }
+
+        async function loadAttachments() {
+            const { data } = await supabase
+                .from('ticket_attachments')
+                .select('*')
+                .eq('ticket_id', ticketId)
+                .is('message_id', null);
+
+            if (data && data.length > 0) {
+                document.getElementById('attachmentsGroup').style.display = 'block';
+                const container = document.getElementById('attachmentsList');
+                container.innerHTML = data.map(att => 
+                    `<img src="${att.file_url}" class="attachment-thumb" onclick="window.open('${att.file_url}')">`
+                ).join('');
+            }
+        }
+
+        async function loadActivityLog() {
+            const { data } = await supabase
+                .from('ticket_activity_log')
+                .select('*')
+                .eq('ticket_id', ticketId)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            if (data && data.length > 0) {
+                const container = document.getElementById('activityList');
+                container.innerHTML = data.map(log => `
+                    <div class="activity-item">
+                        <div>${log.action}: ${log.old_value} → ${log.new_value}</div>
+                        <div class="activity-time">${formatTime(log.created_at)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function loadMessages() {
+            const { data } = await supabase
+                .from('ticket_messages')
+                .select('*')
+                .eq('ticket_id', ticketId)
+                .order('created_at', { ascending: true });
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '';
+
+            if (data) {
+                data.forEach(msg => {
+                    appendMessage(msg);
+                });
+                scrollToBottom();
+            }
+
+            // Subscribe to new messages
+            supabase
+                .channel(`admin-ticket-${ticketId}`)
+                .on('postgres_changes', {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'ticket_messages',
+                    filter: `ticket_id=eq.${ticketId}`
+                }, (payload) => {
+                    appendMessage(payload.new);
+                    scrollToBottom();
+                })
+                .subscribe();
+        }
+
+        function appendMessage(msg) {
+            const container = document.getElementById('chatMessages');
+            const isAdmin = msg.sender_type === 'admin';
+            const isSystem = msg.is_auto_response;
+
+            const div = document.createElement('div');
+            div.className = `message ${isSystem ? 'system' : msg.sender_type}`;
+            
+            const avatar = isAdmin ? '👨‍💼' : (customerData ? customerData.nama.charAt(0).toUpperCase() : 'C');
+            
+            div.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-sender">${msg.sender_name}</span>
+                        <span class="message-time">${formatTime(msg.created_at)}</span>
+                    </div>
+                    <div class="message-bubble">${msg.message}</div>
+                </div>
+            `;
+
+            container.appendChild(div);
+        }
+
+        function formatTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+
+            if (!message) return;
+
+            document.getElementById('sendBtn').disabled = true;
+
+            try {
+                const { error } = await supabase
+                    .from('ticket_messages')
+                    .insert({
+                        ticket_id: ticketId,
+                        sender_id: adminData.memberId,
+                        sender_type: 'admin',
+                        sender_name: adminData.nama || 'Admin CS',
+                        message: message
+                    });
+
+                if (error) throw error;
+
+                // Update ticket status to in_progress if still open
+                if (currentTicket.status === 'open') {
+                    await supabase
+                        .from('complaint_tickets')
+                        .update({ status: 'in_progress' })
+                        .eq('id', ticketId);
+                }
+
+                // Notify customer
+                await supabase.from('ticket_notifications').insert({
+                    ticket_id: ticketId,
+                    user_id: currentTicket.member_id,
+                    user_type: 'customer',
+                    notification_type: 'admin_reply',
+                    title: 'Balasan Admin',
+                    message: `Admin: ${message}`
+                });
+
+                input.value = '';
+
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal mengirim pesan');
+            }
+
+            document.getElementById('sendBtn').disabled = false;
+        }
+
+        function useQuickReply(text) {
+            document.getElementById('messageInput').value = text;
+            document.getElementById('messageInput').focus();
+        }
+
+        document.getElementById('messageInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        async function updatePriority() {
+            const priority = document.getElementById('prioritySelect').value;
+            
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({ priority: priority })
+                .eq('id', ticketId);
+
+            if (!error) {
+                alert('Priority berhasil diupdate');
+            }
+        }
+
+        async function autoAssign() {
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({
+                    assigned_to: adminData.memberId,
+                    assigned_at: new Date().toISOString(),
+                    status: 'in_progress'
+                })
+                .eq('id', ticketId);
+
+            if (!error) {
+                currentTicket.assigned_to = adminData.memberId;
+                currentTicket.status = 'in_progress';
+            }
+        }
+
+        function resolveTicket() {
+            document.getElementById('resolveModal').classList.add('active');
+        }
+
+        async function confirmResolve() {
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({
+                    status: 'resolved',
+                    resolved_at: new Date().toISOString()
+                })
+                .eq('id', ticketId);
+
+            if (!error) {
+                // Notify customer
+                await supabase.from('ticket_notifications').insert({
+                    ticket_id: ticketId,
+                    user_id: currentTicket.member_id,
+                    user_type: 'customer',
+                    notification_type: 'resolved',
+                    title: 'Ticket Resolved',
+                    message: 'Ticket Anda telah diselesaikan. Mohon beri rating untuk layanan kami.'
+                });
+
+                alert('Ticket berhasil di-resolve');
+                location.reload();
+            }
+
+            closeModal();
+        }
+
+        function closeModal() {
+            document.getElementById('resolveModal').classList.remove('active');
+        }
+
+        function closeTicket() {
+            document.getElementById('closeModal').classList.add('active');
+        }
+
+        function closeModalDialog() {
+            document.getElementById('closeModal').classList.remove('active');
+        }
+
+        async function confirmClose() {
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({
+                    status: 'closed',
+                    closed_at: new Date().toISOString()
+                })
+                .eq('id', ticketId);
+
+            if (!error) {
+                await supabase.from('ticket_notifications').insert({
+                    ticket_id: ticketId,
+                    user_id: currentTicket.member_id,
+                    user_type: 'customer',
+                    notification_type: 'closed',
+                    title: 'Ticket Closed',
+                    message: 'Ticket Anda telah ditutup.'
+                });
+
+                alert('Ticket berhasil di-close');
+                location.reload();
+            }
+
+            closeModalDialog();
+        }
+
+        loadTicketDetail();
+    </script>
+</body>
+</html>

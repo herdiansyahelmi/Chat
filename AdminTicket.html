@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Ticket Management</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 220px;
+            height: 100vh;
+            background: #1a1a2e;
+            color: #fff;
+            padding: 20px 0;
+        }
+
+        .sidebar .logo {
+            font-size: 20px;
+            font-weight: 900;
+            font-style: italic;
+            color: #e30613;
+            padding: 0 20px 20px;
+            border-bottom: 1px solid #2a2a4e;
+        }
+
+        .sidebar .menu {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .sidebar .menu li {
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: .2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar .menu li:hover, .sidebar .menu li.active {
+            background: #2a2a4e;
+            border-left: 3px solid #e30613;
+        }
+
+        .main {
+            margin-left: 220px;
+            padding: 20px;
+        }
+
+        .topbar {
+            background: #fff;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+        }
+
+        .topbar h2 {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .btn-primary {
+            background: #e30613;
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: #c70511;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            margin-bottom: 20px;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            text-align: center;
+        }
+
+        .stat-card .num {
+            font-size: 28px;
+            font-weight: bold;
+            color: #e30613;
+        }
+
+        .stat-card.total .num { color: #333; }
+        .stat-card.open .num { color: #f39c12; }
+        .stat-card.progress .num { color: #3498db; }
+        .stat-card.resolved .num { color: #27ae60; }
+        .stat-card.time .num { color: #9b59b6; }
+        .stat-card.rating .num { color: #e74c3c; }
+
+        .stat-card .label {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        .filter-bar {
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-item label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .filter-item select,
+        .filter-item input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .filter-item select:focus,
+        .filter-item input:focus {
+            border-color: #e30613;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 13px;
+        }
+
+        .tab.active {
+            background: #e30613;
+            color: white;
+        }
+
+        .ticket-table {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.08);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        thead {
+            background: #f9f9f9;
+        }
+
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #666;
+            font-size: 13px;
+        }
+
+        td {
+            padding: 12px;
+            border-top: 1px solid #eee;
+            font-size: 13px;
+            color: #333;
+        }
+
+        tbody tr {
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        tbody tr:hover {
+            background: #f8f9ff;
+        }
+
+        .ticket-number {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-open { background: #fff3cd; color: #856404; }
+        .status-in_progress { background: #cce5ff; color: #004085; }
+        .status-resolved { background: #d4edda; color: #155724; }
+        .status-closed { background: #e2e3e5; color: #383d41; }
+
+        .priority-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .priority-low { background: #d1ecf1; color: #0c5460; }
+        .priority-normal { background: #d4edda; color: #155724; }
+        .priority-high { background: #fff3cd; color: #856404; }
+        .priority-urgent { background: #f8d7da; color: #721c24; }
+
+        .action-btns {
+            display: flex;
+            gap: 5px;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-assign {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-close {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state .icon { font-size: 64px; margin-bottom: 20px; }
+        .empty-state h3 { font-size: 20px; color: #333; margin-bottom: 10px; }
+        .empty-state p { color: #666; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .btn-modal {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-cancel {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-confirm {
+            background: #667eea;
+            color: white;
+        }
+
+        .notification-badge {
+            background: #e74c3c;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            margin-left: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="logo"><img src="Alfamind.jpg" style="width:100%;max-width:160px"></div>
+    <ul class="menu">
+        <li onclick="location.href='Dashboard.html'">📊 Dashboard</li>
+        <li onclick="location.href='Dashboard.html'">💬 Grup Chat</li>
+        <li class="active">🎫 Ticket Komplain</li>
+        <li onclick="location.href='Dashboard.html'">👥 Data User</li>
+        <li onclick="logout()">🚪 Logout</li>
+    </ul>
+</div>
+
+<div class="main">
+    <div class="topbar"><h2>Ticket Management</h2></div>
+
+    <div class="stats">
+            <div class="stat-card total">
+                <div class="num" id="totalTickets">0</div>
+                <div class="label">Total Ticket</div>
+            </div>
+            <div class="stat-card open">
+                <div class="num" id="openTickets">0</div>
+                <div class="label">Open</div>
+            </div>
+            <div class="stat-card progress">
+                <div class="num" id="progressTickets">0</div>
+                <div class="label">In Progress</div>
+            </div>
+            <div class="stat-card resolved">
+                <div class="num" id="resolvedTickets">0</div>
+                <div class="label">Resolved</div>
+            </div>
+            <div class="stat-card time">
+                <div class="num" id="avgResponseTime">0h</div>
+                <div class="label">Avg Response Time</div>
+            </div>
+            <div class="stat-card rating">
+                <div class="num" id="avgRating">0.0</div>
+                <div class="label">Avg Rating</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-item">
+                <label>Status</label>
+                <select id="filterStatus">
+                    <option value="">Semua Status</option>
+                    <option value="open">Open</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                    <option value="closed">Closed</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Kategori</label>
+                <select id="filterCategory">
+                    <option value="">Semua Kategori</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Priority</label>
+                <select id="filterPriority">
+                    <option value="">Semua Priority</option>
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <label>Cari</label>
+                <input type="text" id="searchInput" placeholder="Ticket number, customer...">
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('all')">
+                Semua <span class="notification-badge" id="badgeAll">0</span>
+            </button>
+            <button class="tab" onclick="switchTab('unassigned')">
+                Belum Ditangani <span class="notification-badge" id="badgeUnassigned">0</span>
+            </button>
+            <button class="tab" onclick="switchTab('my')">
+                Ticket Saya <span class="notification-badge" id="badgeMy">0</span>
+            </button>
+        </div>
+
+        <div class="ticket-table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ticket Number</th>
+                        <th>Customer</th>
+                        <th>Kategori</th>
+                        <th>Subjek</th>
+                        <th>Status</th>
+                        <th>Priority</th>
+                        <th>Dibuat</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="ticketTableBody">
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="icon">⏳</div>
+                            <h3>Memuat data...</h3>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal Assign -->
+    <div class="modal" id="assignModal">
+        <div class="modal-content">
+            <div class="modal-header">Assign Ticket</div>
+            <div class="form-group">
+                <label>Assign ke Admin</label>
+                <select id="assignAdmin">
+                    <option value="">Pilih Admin</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Priority</label>
+                <select id="assignPriority">
+                    <option value="low">Low</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="closeModal()">Batal</button>
+                <button class="btn-modal btn-confirm" onclick="confirmAssign()">Assign</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function logout() {
+            localStorage.removeItem('admin');
+            window.location.href = 'LoginAdmin.html';
+        }
+
+        var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const adminData = JSON.parse(localStorage.getItem('admin'));
+        
+        if (!adminData) {
+            alert('Akses ditolak - Silakan login sebagai admin');
+            window.location.href = 'LoginAdmin.html';
+        }
+
+        let allTickets = [];
+        let currentTab = 'all';
+        let selectedTicketId = null;
+
+        async function loadStats() {
+            // Get basic stats from tickets
+            const { data: tickets } = await supabase
+                .from('complaint_tickets')
+                .select('*');
+            
+            console.log('Stats - All tickets:', tickets);
+            
+            if (tickets) {
+                const total = tickets.length;
+                const open = tickets.filter(t => t.status === 'open').length;
+                const inProgress = tickets.filter(t => t.status === 'in_progress').length;
+                const resolved = tickets.filter(t => t.status === 'resolved').length;
+                
+                console.log('Stats:', { total, open, inProgress, resolved });
+                
+                document.getElementById('totalTickets').textContent = total;
+                document.getElementById('openTickets').textContent = open;
+                document.getElementById('progressTickets').textContent = inProgress;
+                document.getElementById('resolvedTickets').textContent = resolved;
+            }
+
+            // Get average rating
+            const { data: ratings } = await supabase
+                .from('ticket_ratings')
+                .select('rating');
+            
+            if (ratings && ratings.length > 0) {
+                const avg = ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length;
+                document.getElementById('avgRating').textContent = avg.toFixed(1);
+            } else {
+                document.getElementById('avgRating').textContent = '0.0';
+            }
+            
+            // Avg response time (placeholder)
+            document.getElementById('avgResponseTime').textContent = '0h';
+        }
+
+        async function loadCategories() {
+            const { data } = await supabase
+                .from('ticket_categories')
+                .select('category_name')
+                .eq('is_active', true);
+
+            if (data) {
+                const select = document.getElementById('filterCategory');
+                data.forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat.category_name;
+                    option.textContent = cat.category_name;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function loadAdmins() {
+            const { data } = await supabase
+                .from('data_user')
+                .select('memberId, nama')
+                .eq('isAdmin', true);
+
+            if (data) {
+                const select = document.getElementById('assignAdmin');
+                data.forEach(admin => {
+                    const option = document.createElement('option');
+                    option.value = admin.memberId;
+                    option.textContent = admin.nama;
+                    select.appendChild(option);
+                });
+            }
+        }
+
+        async function loadTickets() {
+            console.log('Loading tickets...');
+            
+            const { data, error } = await supabase
+                .from('complaint_tickets')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            console.log('Tickets data:', data);
+            console.log('Tickets error:', error);
+
+            if (error) {
+                console.error('Error:', error);
+                return;
+            }
+
+            if (data) {
+                allTickets = data || [];
+                updateBadges();
+                renderTickets();
+            }
+
+            // Subscribe to changes
+            supabase
+                .channel('admin-tickets')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'complaint_tickets'
+                }, () => {
+                    loadTickets();
+                    loadStats();
+                })
+                .subscribe();
+        }
+
+        function updateBadges() {
+            document.getElementById('badgeAll').textContent = allTickets.length;
+            document.getElementById('badgeUnassigned').textContent = 
+                allTickets.filter(t => !t.assigned_to && t.status !== 'closed').length;
+            document.getElementById('badgeMy').textContent = 
+                allTickets.filter(t => t.assigned_to === adminData.memberId).length;
+        }
+
+        function renderTickets() {
+            let filtered = allTickets;
+
+            // Tab filter
+            if (currentTab === 'unassigned') {
+                filtered = filtered.filter(t => !t.assigned_to && t.status !== 'closed');
+            } else if (currentTab === 'my') {
+                filtered = filtered.filter(t => t.assigned_to === adminData.memberId);
+            }
+
+            // Other filters
+            const status = document.getElementById('filterStatus').value;
+            const category = document.getElementById('filterCategory').value;
+            const priority = document.getElementById('filterPriority').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            if (status) filtered = filtered.filter(t => t.status === status);
+            if (category) filtered = filtered.filter(t => t.category === category);
+            if (priority) filtered = filtered.filter(t => t.priority === priority);
+            if (search) {
+                filtered = filtered.filter(t => 
+                    t.ticket_number.toLowerCase().includes(search) ||
+                    t.subject.toLowerCase().includes(search) ||
+                    (t.customer && t.customer.nama.toLowerCase().includes(search))
+                );
+            }
+
+            const tbody = document.getElementById('ticketTableBody');
+            
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div class="icon">📭</div>
+                            <h3>Tidak ada ticket</h3>
+                            <p>Tidak ada ticket yang sesuai dengan filter</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(ticket => `
+                <tr onclick="viewTicket('${ticket.id}')">
+                    <td class="ticket-number">${ticket.ticket_number}</td>
+                    <td>${ticket.member_id || 'Unknown'}</td>
+                    <td>${ticket.category}</td>
+                    <td>${ticket.subject}</td>
+                    <td><span class="status-badge status-${ticket.status}">${ticket.status}</span></td>
+                    <td><span class="priority-badge priority-${ticket.priority}">${ticket.priority}</span></td>
+                    <td>${formatDate(ticket.created_at)}</td>
+                    <td onclick="event.stopPropagation()">
+                        <div class="action-btns">
+                            <button class="btn-action btn-view" onclick="viewTicket('${ticket.id}')">View</button>
+                            ${!ticket.assigned_to ? 
+                                `<button class="btn-action btn-assign" onclick="openAssignModal('${ticket.id}')">Assign</button>` : 
+                                ''}
+                            ${ticket.status !== 'closed' ? 
+                                `<button class="btn-action btn-close" onclick="closeTicketDirect('${ticket.id}')">Close</button>` : 
+                                ''}
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('id-ID', { 
+                day: 'numeric', 
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderTickets();
+        }
+
+        function viewTicket(ticketId) {
+            window.location.href = `AdminDetailTicket.html?id=${ticketId}`;
+        }
+
+        function openAssignModal(ticketId) {
+            selectedTicketId = ticketId;
+            const ticket = allTickets.find(t => t.id === ticketId);
+            if (ticket) {
+                document.getElementById('assignPriority').value = ticket.priority;
+            }
+            document.getElementById('assignModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('assignModal').classList.remove('active');
+            selectedTicketId = null;
+        }
+
+        async function confirmAssign() {
+            const adminId = document.getElementById('assignAdmin').value;
+            const priority = document.getElementById('assignPriority').value;
+
+            if (!adminId) {
+                alert('Pilih admin terlebih dahulu');
+                return;
+            }
+
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({
+                    assigned_to: adminId,
+                    assigned_at: new Date().toISOString(),
+                    priority: priority,
+                    status: 'in_progress'
+                })
+                .eq('id', selectedTicketId);
+
+            if (!error) {
+                // Create notification
+                await supabase.from('ticket_notifications').insert({
+                    ticket_id: selectedTicketId,
+                    user_id: adminId,
+                    user_type: 'admin',
+                    notification_type: 'assigned',
+                    title: 'Ticket Assigned',
+                    message: 'Ticket baru telah di-assign kepada Anda'
+                });
+
+                alert('Ticket berhasil di-assign');
+                closeModal();
+                loadTickets();
+            }
+        }
+
+        async function closeTicketDirect(ticketId) {
+            if (!confirm('Yakin ingin close ticket ini?')) return;
+
+            const ticket = allTickets.find(t => t.id === ticketId);
+            
+            const { error } = await supabase
+                .from('complaint_tickets')
+                .update({
+                    status: 'closed',
+                    closed_at: new Date().toISOString()
+                })
+                .eq('id', ticketId);
+
+            if (!error) {
+                await supabase.from('ticket_notifications').insert({
+                    ticket_id: ticketId,
+                    user_id: ticket.member_id,
+                    user_type: 'customer',
+                    notification_type: 'closed',
+                    title: 'Ticket Closed',
+                    message: 'Ticket Anda telah ditutup.'
+                });
+
+                alert('Ticket berhasil di-close');
+                loadTickets();
+                loadStats();
+            }
+        }
+
+        // Filters
+        document.getElementById('filterStatus').addEventListener('change', renderTickets);
+        document.getElementById('filterCategory').addEventListener('change', renderTickets);
+        document.getElementById('filterPriority').addEventListener('change', renderTickets);
+        document.getElementById('searchInput').addEventListener('input', renderTickets);
+
+        // Initialize
+        loadStats();
+        loadCategories();
+        loadAdmins();
+        loadTickets();
+
+        // Auto refresh stats every 30 seconds
+        setInterval(() => {
+            loadStats();
+        }, 30000);
+    </script>
+</body>
+</html>
